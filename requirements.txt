@@ -1,4 +1,10 @@
 streamlit
-google-generativeai
+groq
 python-dotenv
 requests
+pandas
+plotly
+google-api-python-client
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
