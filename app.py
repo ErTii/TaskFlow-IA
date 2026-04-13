@@ -1,54 +1,355 @@
 import streamlit as st
-import json
+import pandas as pd
+import plotly.express as px
+from agent import analyser_contenu
+from notion_api import creer_tache_notion, recuperer_taches_notion
+from fetch_emails import recuperer_derniers_emails
+from google_calendar_api import creer_evenement_calendar
 
-# Import de la logique de tes autres fichiers
-from agent import analyser_texte_en_taches
-from notion_api import creer_tache_notion
+st.set_page_config(page_title="TaskFlow AI", page_icon="🚀", layout="wide")
 
-st.set_page_config(page_title="TaskFlow AI", page_icon="🤖")
+st.markdown("""
+    <style>
+    .stButton>button {
+        width: 100%;
+        border-radius: 8px;
+        height: 3em;
+        background-color: #FF4B4B;
+        color: white;
+        font-weight: bold;
+    }
+    .main {
+        background-color: #f8f9fa;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-st.title("🤖 TaskFlow AI")
-st.subheader("L'Orchestrateur de Productivité")
-st.write("Transformez vos réunions et e-mails en actions concrètes dans Notion.")
+st.title("🚀 TaskFlow AI")
+st.subheader("L'IA qui transforme vos flux en actions Notion")
 
-texte_utilisateur = st.text_area("Collez votre transcription de réunion ou vos e-mails ici :", height=200)
+if "manual_analysis" not in st.session_state:
+    st.session_state.manual_analysis = None
 
-if st.button("Analyser et Créer les tâches"):
-    if texte_utilisateur:
-        with st.spinner("L'agent analyse la situation et contacte Notion..."):
-            try:
-                # 1. Le Cerveau IA extrait les tâches depuis le texte
-                reponse_brute = analyser_texte_en_taches(texte_utilisateur)
-                
-                # Petit nettoyage au cas où ChatGPT ajoute des balises ```json autour de sa réponse
-                if reponse_brute.startswith("```json"):
-                    reponse_brute = reponse_brute.strip("```json").strip("```")
-                elif reponse_brute.startswith("```"):
-                    reponse_brute = reponse_brute.strip("```")
-                    
-                # On transforme le texte JSON en vraie liste utilisable par Python
-                taches = json.loads(reponse_brute)
-                
-                st.success("✅ Analyse terminée ! Voici ce que l'Agent a exécuté :")
-                
-                # 2. Les Bras (API) créent les tâches une par une dans Notion
-                for tache in taches:
-                    nom = tache.get("task", "Tâche sans nom")
-                    priorite = tache.get("priority", "Moyenne")
-                    assigne = tache.get("assignee", "Inconnu")
-                    
-                    st.write(f"- **{nom}** (Priorité: {priorite} | Assigné à: {assigne})")
-                    
-                    # L'action autonome : envoi à l'API Notion
-                    succes = creer_tache_notion(nom, priorite, assigne)
-                    
-                    if succes:
-                        st.caption(f"✨ Ticket créé avec succès dans Notion !")
-                    else:
-                        st.error(f"❌ Erreur lors de la création de '{nom}' dans Notion. Vérifie tes clés API.")
-                        
-            except Exception as e:
-                st.error(f"Une erreur est survenue avec l'IA ou le code : {e}")
-                
+if "scan_analysis" not in st.session_state:
+    st.session_state.scan_analysis = None
+
+if "notification_message" not in st.session_state:
+    st.session_state.notification_message = None
+
+if "notification_type" not in st.session_state:
+    st.session_state.notification_type = "success"
+
+tab1, tab2, tab3 = st.tabs(["📝 Saisie Manuelle", "📥 Scan Outlook", "📊 Dashboard"])
+
+
+def afficher_notification_fixe(message, type_notif="success"):
+    if type_notif == "success":
+        st.toast(message, icon="✅")
     else:
-        st.warning("⚠️ Veuillez entrer du texte avant de lancer l'analyse.")
+        st.toast(message, icon="❌")
+
+
+def afficher_bloc_taches(taches, prefixe):
+    if not taches:
+        st.info("Aucune tâche détectée.")
+        return
+
+    for i, t in enumerate(taches):
+        key = f"{prefixe}_check_{i}"
+        if key not in st.session_state:
+            st.session_state[key] = True
+
+        st.checkbox(
+            f"{t.get('task', 'Tâche')} | {t.get('priority', 'Moyenne')} | {t.get('assignee', 'Non assigné')}",
+            key=key
+        )
+
+
+def afficher_bloc_reunions(reunions, prefixe):
+    if not reunions:
+        return
+
+    st.markdown("### Réunions détectées")
+
+    for i, reunion in enumerate(reunions):
+        st.markdown(f"**Réunion {i + 1}**")
+        st.write(f"**Titre :** {reunion.get('title', '')}")
+        st.write(f"**Date :** {reunion.get('date', '')}")
+        st.write(f"**Heure :** {reunion.get('time', '')}")
+        st.write(f"**Durée :** {reunion.get('duration_minutes', 60)} min")
+
+        participants = st.text_input(
+            "Emails des participants (séparés par des virgules)",
+            key=f"{prefixe}_participants_{i}",
+            placeholder="exemple1@gmail.com, exemple2@gmail.com"
+        )
+
+        if st.button("Créer dans Google Calendar", key=f"{prefixe}_create_meeting_{i}"):
+            emails = [email.strip() for email in participants.split(",") if email.strip()]
+            succes, message = creer_evenement_calendar(
+                titre=reunion.get("title", "Réunion"),
+                date_str=reunion.get("date", ""),
+                heure_str=reunion.get("time", ""),
+                participants=emails,
+                duree_minutes=reunion.get("duration_minutes", 60),
+                description="Événement proposé par TaskFlow AI"
+            )
+            if succes:
+                st.session_state.notification_message = "Réunion créée avec succès dans Google Calendar."
+                st.session_state.notification_type = "success"
+                st.rerun()
+            else:
+                st.session_state.notification_message = message
+                st.session_state.notification_type = "error"
+                st.rerun()
+
+        st.markdown("---")
+
+
+with tab1:
+    source = st.selectbox("Type de contenu :", ["Réunion (Transcription)", "Email reçu"])
+    texte_source = st.text_area(
+        "Collez le contenu ici :",
+        height=220,
+        placeholder="Ex: Mathieu doit corriger le bug pour demain..."
+    )
+
+    if st.button("Analyser", key="analyse_manuelle"):
+        if not texte_source or not texte_source.strip():
+            st.warning("Le champ est vide.")
+        else:
+            with st.spinner("Analyse IA en cours..."):
+                st.session_state.manual_analysis = analyser_contenu(texte_source, source)
+
+    if st.session_state.manual_analysis:
+        resultat = st.session_state.manual_analysis
+        taches = resultat.get("tasks", [])
+        reunions = resultat.get("meetings", [])
+
+        st.markdown("### Tâches détectées")
+        afficher_bloc_taches(taches, "manual")
+
+        statut_manual = st.selectbox(
+            "Statut à appliquer dans Notion",
+            ["À faire", "En cours", "Fait"],
+            key="statut_manual"
+        )
+
+        if st.button("Envoyer les tâches sélectionnées vers Notion", key="send_manual"):
+            nb_envoyees = 0
+
+            for i, t in enumerate(taches):
+                if st.session_state.get(f"manual_check_{i}", False):
+                    succes, message = creer_tache_notion(
+                        t.get("task"),
+                        t.get("priority"),
+                        t.get("assignee"),
+                        None,
+                        statut_manual
+                    )
+                    if succes:
+                        nb_envoyees += 1
+                    else:
+                        st.session_state.notification_message = message
+                        st.session_state.notification_type = "error"
+
+            if nb_envoyees > 0:
+                st.session_state.notification_message = f"{nb_envoyees} tâche(s) envoyée(s) vers Notion."
+                st.session_state.notification_type = "success"
+                st.session_state.manual_analysis = None
+                st.rerun()
+
+        afficher_bloc_reunions(reunions, "manual")
+
+
+with tab2:
+    st.write("Scannez vos derniers emails pour extraire des tâches.")
+    nb_mails = st.slider("Nombre d'emails à vérifier :", 1, 5, 2)
+
+    if st.button("🔍 Lancer le scan automatique", key="scan_outlook"):
+        with st.spinner("Connexion à la boîte mail..."):
+            emails = recuperer_derniers_emails(nb_mails)
+
+            if isinstance(emails, str):
+                st.error(emails)
+                st.session_state.scan_analysis = None
+            elif not emails:
+                st.info("Aucun email trouvé.")
+                st.session_state.scan_analysis = []
+            else:
+                analyses = []
+                for mail in emails:
+                    analyse = analyser_contenu(mail["corps"], "Email reçu")
+                    analyses.append({
+                        "mail": mail,
+                        "tasks": analyse.get("tasks", []),
+                        "meetings": analyse.get("meetings", [])
+                    })
+                st.session_state.scan_analysis = analyses
+
+    if st.session_state.scan_analysis:
+        for mail_index, bloc in enumerate(st.session_state.scan_analysis.copy()):
+            mail = bloc["mail"]
+            taches = bloc["tasks"]
+            reunions = bloc["meetings"]
+
+            st.markdown("---")
+            st.write(f"📧 **Mail :** {mail.get('sujet', 'Sans sujet')}")
+            st.write(f"**Expéditeur :** {mail.get('expediteur', 'Inconnu')}")
+
+            with st.expander("Voir le texte brut"):
+                st.text(mail.get("corps", ""))
+
+            if taches:
+                st.markdown("**Tâches détectées :**")
+                for task_index, t in enumerate(taches):
+                    key = f"scan_{mail_index}_{task_index}"
+                    if key not in st.session_state:
+                        st.session_state[key] = True
+
+                    st.checkbox(
+                        f"{t.get('task', 'Tâche')} | {t.get('priority', 'Moyenne')} | {t.get('assignee', 'Non assigné')}",
+                        key=key
+                    )
+
+                statut_mail = st.selectbox(
+                    "Statut à appliquer pour ce mail",
+                    ["À faire", "En cours", "Fait"],
+                    key=f"statut_scan_mail_{mail_index}"
+                )
+
+                if st.button(
+                    "Envoyer les tâches sélectionnées de ce mail vers Notion",
+                    key=f"send_scan_mail_{mail_index}"
+                ):
+                    nb_envoyees_mail = 0
+
+                    for task_index, t in enumerate(taches):
+                        key = f"scan_{mail_index}_{task_index}"
+                        if st.session_state.get(key, False):
+                            succes, message = creer_tache_notion(
+                                t.get("task"),
+                                t.get("priority"),
+                                t.get("assignee"),
+                                None,
+                                statut_mail
+                            )
+                            if succes:
+                                nb_envoyees_mail += 1
+                            else:
+                                st.session_state.notification_message = message
+                                st.session_state.notification_type = "error"
+
+                    if nb_envoyees_mail > 0:
+                        st.session_state.notification_message = f"{nb_envoyees_mail} tâche(s) envoyée(s) pour ce mail."
+                        st.session_state.notification_type = "success"
+                        st.session_state.scan_analysis.pop(mail_index)
+                        st.rerun()
+            else:
+                st.write("Pas d'action détectée dans ce mail.")
+
+            if reunions:
+                st.markdown("**Réunions détectées :**")
+                afficher_bloc_reunions(reunions, f"scan_{mail_index}")
+
+
+with tab3:
+    st.markdown("## Dashboard des tâches Notion")
+
+    if st.button("🔄 Actualiser le dashboard", key="refresh_dashboard"):
+        st.session_state["dashboard_refresh"] = True
+
+    succes, message, taches_notion = recuperer_taches_notion()
+
+    if not succes:
+        st.error(message)
+    elif not taches_notion:
+        st.info("Aucune tâche trouvée dans Notion.")
+    else:
+        df = pd.DataFrame(taches_notion)
+
+        total = len(df)
+        a_faire = len(df[df["Statut"] == "À faire"])
+        en_cours = len(df[df["Statut"] == "En cours"])
+        fait = len(df[df["Statut"] == "Fait"])
+
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Total tâches", total)
+        col2.metric("À faire", a_faire)
+        col3.metric("En cours", en_cours)
+        col4.metric("Fait", fait)
+
+        st.markdown("### Répartition par statut")
+
+        df_statuts = pd.DataFrame({
+            "Statut": ["À faire", "En cours", "Fait"],
+            "Nombre": [a_faire, en_cours, fait]
+        })
+
+        fig = px.pie(
+            df_statuts,
+            names="Statut",
+            values="Nombre",
+            color="Statut",
+            color_discrete_map={
+                "À faire": "#3B82F6",
+                "En cours": "#F59E0B",
+                "Fait": "#10B981"
+            },
+            hole=0.2
+        )
+
+        fig.update_traces(textinfo="percent+label")
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown("### Filtres")
+
+        colf1, colf2, colf3 = st.columns(3)
+
+        with colf1:
+            statuts_disponibles = sorted(df["Statut"].dropna().unique().tolist())
+            filtre_statut = st.multiselect(
+                "Filtrer par statut",
+                statuts_disponibles,
+                default=statuts_disponibles
+            )
+
+        with colf2:
+            priorites_disponibles = sorted(df["Priorité"].dropna().unique().tolist())
+            filtre_priorite = st.multiselect(
+                "Filtrer par priorité",
+                priorites_disponibles,
+                default=priorites_disponibles
+            )
+
+        with colf3:
+            assignes_disponibles = sorted(df["Assigné"].dropna().unique().tolist())
+            filtre_assigne = st.multiselect(
+                "Filtrer par assigné",
+                assignes_disponibles,
+                default=assignes_disponibles
+            )
+
+        df_filtre = df[
+            df["Statut"].isin(filtre_statut)
+            & df["Priorité"].isin(filtre_priorite)
+            & df["Assigné"].isin(filtre_assigne)
+        ]
+
+        st.markdown("### Tableau des tâches")
+        st.dataframe(
+            df_filtre[["Tâche", "Priorité", "Assigné", "Statut"]],
+            use_container_width=True,
+            hide_index=True
+        )
+
+if "notification_message" in st.session_state and st.session_state.notification_message:
+    afficher_notification_fixe(
+        st.session_state.notification_message,
+        st.session_state.get("notification_type", "success")
+    )
+    st.session_state.notification_message = None
+    st.session_state.notification_type = "success"
+
+st.markdown("---")
+st.caption("TaskFlow AI | Hackathon Demo 2026")
