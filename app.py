@@ -2,7 +2,11 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from agent import analyser_contenu
-from notion_api import creer_tache_notion, recuperer_taches_notion
+from notion_api import (
+    creer_tache_notion,
+    recuperer_taches_notion,
+    mettre_a_jour_statut_tache,
+)
 from fetch_emails import recuperer_derniers_emails
 from google_calendar_api import creer_evenement_calendar
 
@@ -39,7 +43,12 @@ if "notification_message" not in st.session_state:
 if "notification_type" not in st.session_state:
     st.session_state.notification_type = "success"
 
-tab1, tab2, tab3 = st.tabs(["📝 Saisie Manuelle", "📥 Scan Outlook", "📊 Dashboard"])
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📝 Saisie Manuelle",
+    "📥 Scan Mail",
+    "📊 Dashboard",
+    "✏️ Modifier"
+])
 
 
 def afficher_notification_fixe(message, type_notif="success"):
@@ -102,8 +111,6 @@ def afficher_bloc_reunions(reunions, prefixe):
                 st.session_state.notification_message = message
                 st.session_state.notification_type = "error"
                 st.rerun()
-
-        st.markdown("---")
 
 
 with tab1:
@@ -256,9 +263,6 @@ with tab2:
 with tab3:
     st.markdown("## Dashboard des tâches Notion")
 
-    if st.button("🔄 Actualiser le dashboard", key="refresh_dashboard"):
-        st.session_state["dashboard_refresh"] = True
-
     succes, message, taches_notion = recuperer_taches_notion()
 
     if not succes:
@@ -342,6 +346,101 @@ with tab3:
             use_container_width=True,
             hide_index=True
         )
+
+
+with tab4:
+    st.markdown("## Modifier le statut des tâches")
+
+    succes, message, taches_notion = recuperer_taches_notion()
+
+    if not succes:
+        st.error(message)
+    elif not taches_notion:
+        st.info("Aucune tâche trouvée dans Notion.")
+    else:
+        df = pd.DataFrame(taches_notion)
+
+        colm1, colm2, colm3 = st.columns(3)
+
+        with colm1:
+            statuts_disponibles = sorted(df["Statut"].dropna().unique().tolist())
+            filtre_statut_modif = st.multiselect(
+                "Filtrer par statut",
+                statuts_disponibles,
+                default=statuts_disponibles,
+                key="filtre_statut_modif"
+            )
+
+        with colm2:
+            priorites_disponibles = sorted(df["Priorité"].dropna().unique().tolist())
+            filtre_priorite_modif = st.multiselect(
+                "Filtrer par priorité",
+                priorites_disponibles,
+                default=priorites_disponibles,
+                key="filtre_priorite_modif"
+            )
+
+        with colm3:
+            assignes_disponibles = sorted(df["Assigné"].dropna().unique().tolist())
+            filtre_assigne_modif = st.multiselect(
+                "Filtrer par assigné",
+                assignes_disponibles,
+                default=assignes_disponibles,
+                key="filtre_assigne_modif"
+            )
+
+        df_modif = df[
+            df["Statut"].isin(filtre_statut_modif)
+            & df["Priorité"].isin(filtre_priorite_modif)
+            & df["Assigné"].isin(filtre_assigne_modif)
+        ].copy()
+
+        if df_modif.empty:
+            st.info("Aucune tâche ne correspond aux filtres.")
+        else:
+            st.markdown("### Modifier les statuts")
+
+            header = st.columns([5, 1.5, 1.8, 1.5, 2, 1.5])
+            header[0].markdown("**Tâche**")
+            header[1].markdown("**Priorité**")
+            header[2].markdown("**Assigné**")
+            header[3].markdown("**Statut actuel**")
+            header[4].markdown("**Nouveau statut**")
+            header[5].markdown("**Action**")
+
+            st.markdown("---")
+
+            for _, row in df_modif.iterrows():
+                cols = st.columns([5, 1.5, 1.8, 1.5, 2, 1.5])
+
+                cols[0].write(row["Tâche"])
+                cols[1].write(row["Priorité"])
+                cols[2].write(row["Assigné"])
+                cols[3].write(row["Statut"])
+
+                options_statut = ["À faire", "En cours", "Fait"]
+                index_statut = options_statut.index(row["Statut"]) if row["Statut"] in options_statut else 0
+
+                nouveau_statut = cols[4].selectbox(
+                    "Nouveau statut",
+                    options_statut,
+                    index=index_statut,
+                    key=f"status_select_{row['id']}",
+                    label_visibility="collapsed"
+                )
+
+                if cols[5].button("Mettre à jour", key=f"update_status_{row['id']}"):
+                    succes_update, message_update = mettre_a_jour_statut_tache(row["id"], nouveau_statut)
+                    if succes_update:
+                        st.session_state.notification_message = "Statut mis à jour avec succès."
+                        st.session_state.notification_type = "success"
+                        st.rerun()
+                    else:
+                        st.session_state.notification_message = message_update
+                        st.session_state.notification_type = "error"
+                        st.rerun()
+
+                st.markdown("---")
 
 if "notification_message" in st.session_state and st.session_state.notification_message:
     afficher_notification_fixe(

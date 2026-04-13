@@ -134,6 +134,7 @@ def recuperer_taches_notion():
                     assigne = "Non assigné"
 
                 toutes_les_taches.append({
+                    "id": page.get("id"),
                     "Tâche": nom,
                     "Priorité": priorite,
                     "Assigné": assigne,
@@ -148,3 +149,34 @@ def recuperer_taches_notion():
 
     except requests.RequestException as e:
         return False, f"Erreur réseau Notion : {str(e)}", []
+
+
+def mettre_a_jour_statut_tache(page_id, nouveau_statut):
+    if not page_id:
+        return False, "ID de page Notion manquant."
+
+    url = f"https://api.notion.com/v1/pages/{page_id}"
+
+    data = {
+        "properties": {
+            "Statut": {
+                "rich_text": [{"text": {"content": str(nouveau_statut).strip()}}]
+            }
+        }
+    }
+
+    try:
+        response = requests.patch(url, headers=headers, json=data, timeout=15)
+
+        if response.status_code == 200:
+            return True, "Statut mis à jour avec succès."
+
+        try:
+            erreur = response.json()
+        except Exception:
+            erreur = response.text
+
+        return False, f"Erreur Notion ({response.status_code}) : {erreur}"
+
+    except requests.RequestException as e:
+        return False, f"Erreur réseau Notion : {str(e)}"
