@@ -1,29 +1,37 @@
-import openai
 import os
+import google.generativeai as genai
 from dotenv import load_dotenv
 
 load_dotenv()
-client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Configuration de Gemini
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 def analyser_texte_en_taches(texte):
     """
-    Cette fonction utilise le LLM pour extraire des tâches structurées.
-    C'est notre brique LLM/NLP.
+    Utilise Gemini 1.5 Flash pour extraire les tâches.
+    C'est ultra rapide et gratuit.
     """
+    # On choisit le modèle le plus rapide (Flash)
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    
     prompt = f"""
-    Analyse le texte suivant et extrais les actions concrètes à faire.
-    Réponds UNIQUEMENT sous forme d'une liste d'objets JSON avec :
-    - "task": le titre de la tâche
-    - "priority": Haute, Moyenne ou Basse
-    - "assignee": la personne responsable (si mentionnée, sinon "Inconnu")
-
-    Texte : {texte}
+    Tu es un assistant expert en productivité. 
+    Analyse ce texte (réunion ou e-mail) et extrais les actions concrètes.
+    
+    Réponds EXCLUSIVEMENT sous forme d'une liste JSON d'objets. 
+    Chaque objet doit avoir :
+    - "task": le nom de la tâche
+    - "priority": "Haute", "Moyenne" ou "Basse"
+    - "assignee": le nom de la personne
+    
+    Texte à analyser : {texte}
     """
     
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}]
+    # On force Gemini à répondre en JSON pur
+    response = model.generate_content(
+        prompt,
+        generation_config={"response_mime_type": "application/json"}
     )
     
-    # On récupère le résultat
-    return response.choices[0].message.content
+    return response.text
