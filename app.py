@@ -263,6 +263,9 @@ with tab2:
 with tab3:
     st.markdown("## Dashboard des tâches Notion")
 
+    if st.button("🔄 Actualiser le dashboard", key="refresh_dashboard"):
+        st.rerun()
+
     succes, message, taches_notion = recuperer_taches_notion()
 
     if not succes:
