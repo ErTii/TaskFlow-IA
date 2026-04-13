@@ -26,3 +26,7 @@ Envoyer dans Notion avec :
 - proposition de création d’un événement
 - ajout des participants
 - création dans Google Calendar en local
+
+# V0.0.04 : 
+- modification du statut des tâches directement depuis l’application
+
