@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuration de Gemini
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+genai.configure(api_key="AIzaSyAKZBQWyqel12GpPpAWrTNs27GntV2x4tw")
 
 def analyser_texte_en_taches(texte):
     """
