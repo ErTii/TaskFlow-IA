@@ -7,7 +7,7 @@ from notion_api import (
     recuperer_taches_notion,
     mettre_a_jour_statut_tache,
 )
-from fetch_emails import recuperer_derniers_emails
+from fetch_emails import recuperer_derniers_emails_gmail
 from google_calendar_api import creer_evenement_calendar
 
 st.set_page_config(page_title="TaskFlow AI", page_icon="🚀", layout="wide")
@@ -224,8 +224,19 @@ with tab2:
     nb_mails = st.slider("Nombre d'emails à vérifier :", 1, 5, 2)
 
     if st.button("🔍 Lancer le scan automatique", key="scan_outlook"):
-        with st.spinner("Connexion à la boîte mail..."):
-            emails = recuperer_derniers_emails(nb_mails)
+        with st.spinner("Connexion à Gmail..."):
+            access_token = None
+
+            if hasattr(st.user, "tokens"):
+                access_token = st.user.tokens.get("access")
+
+            if not access_token:
+                st.session_state.notification_message = "Aucun token Gmail disponible. Déconnecte-toi puis reconnecte-toi pour autoriser Gmail."
+                st.session_state.notification_type = "error"
+                st.session_state.scan_analysis = None
+                st.rerun()
+
+            emails = recuperer_derniers_emails_gmail(access_token, nb_mails)
 
             if isinstance(emails, str):
                 st.error(emails)
