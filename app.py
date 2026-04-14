@@ -33,19 +33,19 @@ if not is_logged_in:
             max-width: 760px;
             margin: 70px auto;
             padding: 38px;
-            border-radius: 24px;
-            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 20px;
+            background: #ffffff;
             border: 1px solid #e5e7eb;
             text-align: center;
-            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
         }
         .login-title {
-            font-size: 2.1rem;
+            font-size: 2rem;
             font-weight: 800;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
         .login-sub {
-            font-size: 1.05rem;
+            font-size: 1rem;
             color: #475569;
             margin-bottom: 10px;
         }
@@ -73,17 +73,17 @@ if not is_logged_in:
 st.markdown("""
 <style>
 :root {
-    --bg: #f6f8fb;
+    --bg: #f8f9fa;
     --card: #ffffff;
-    --text: #0f172a;
-    --muted: #64748b;
-    --border: #e2e8f0;
-    --primary: #2563eb;
-    --primary-2: #1d4ed8;
-    --success: #16a34a;
-    --warning: #f59e0b;
-    --danger: #dc2626;
-    --shadow: 0 8px 26px rgba(15, 23, 42, 0.06);
+    --text: #111827;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --primary: #FF4B4B;
+    --primary-dark: #e53e3e;
+    --blue: #3B82F6;
+    --orange: #F59E0B;
+    --green: #10B981;
+    --red: #EF4444;
 }
 
 html, body, [data-testid="stAppViewContainer"] {
@@ -91,79 +91,73 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 .block-container {
-    padding-top: 1.4rem;
+    padding-top: 1.2rem;
     padding-bottom: 2rem;
-}
-
-h1, h2, h3, h4 {
-    color: var(--text);
-}
-
-[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-    border-right: 1px solid var(--border);
 }
 
 .stButton > button {
     width: 100%;
-    border-radius: 12px;
+    border-radius: 10px;
     min-height: 2.9rem;
-    background: linear-gradient(180deg, var(--primary) 0%, var(--primary-2) 100%);
+    background-color: var(--primary);
     color: white;
-    font-weight: 700;
+    font-weight: bold;
     border: none;
-    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.22);
 }
 
 .stButton > button:hover {
-    filter: brightness(1.03);
+    background-color: var(--primary-dark);
 }
 
 div[data-baseweb="tab-list"] {
-    gap: 10px;
-    background: transparent;
+    gap: 8px;
     margin-bottom: 12px;
 }
 
 button[data-baseweb="tab"] {
-    background: #ffffff !important;
+    background: white !important;
     border: 1px solid var(--border) !important;
-    border-radius: 14px !important;
-    padding: 10px 18px !important;
-    box-shadow: var(--shadow);
+    border-radius: 12px !important;
+    padding: 10px 16px !important;
 }
 
 button[data-baseweb="tab"][aria-selected="true"] {
-    border-color: #bfdbfe !important;
-    background: #eff6ff !important;
+    background: #fff1f1 !important;
+    border-color: #ffc9c9 !important;
 }
 
 .card {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 20px;
+    border-radius: 18px;
     padding: 18px 20px;
-    box-shadow: var(--shadow);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
     margin-bottom: 14px;
 }
 
 .hero {
-    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
-    color: white;
-    border-radius: 24px;
-    padding: 26px 28px;
-    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16);
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 22px 24px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
     margin-bottom: 14px;
 }
 
+.hero-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
 .hero-sub {
-    color: rgba(255,255,255,0.82);
-    margin-top: 6px;
+    color: var(--muted);
     font-size: 1rem;
 }
 
 .section-title {
-    font-size: 1.12rem;
+    font-size: 1.1rem;
     font-weight: 800;
     color: var(--text);
     margin-bottom: 10px;
@@ -171,15 +165,15 @@ button[data-baseweb="tab"][aria-selected="true"] {
 
 .muted {
     color: var(--muted);
-    font-size: 0.96rem;
+    font-size: 0.95rem;
 }
 
 .kpi-card {
     background: white;
     border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 18px 18px;
-    box-shadow: var(--shadow);
+    border-radius: 18px;
+    padding: 18px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
 }
 
 .kpi-label {
@@ -225,21 +219,21 @@ button[data-baseweb="tab"][aria-selected="true"] {
 }
 
 .badge-gray {
-    background: #e2e8f0;
-    color: #334155;
+    background: #e5e7eb;
+    color: #374151;
 }
 
 .mail-box {
     background: white;
     border: 1px solid var(--border);
-    border-radius: 20px;
+    border-radius: 18px;
     padding: 16px 18px;
-    box-shadow: var(--shadow);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
     margin-bottom: 18px;
 }
 
 .mail-title {
-    font-size: 1.08rem;
+    font-size: 1.05rem;
     font-weight: 800;
     color: var(--text);
     margin-bottom: 2px;
@@ -259,29 +253,28 @@ button[data-baseweb="tab"][aria-selected="true"] {
 
 [data-testid="stDataFrame"] {
     border: 1px solid var(--border);
-    border-radius: 18px;
+    border-radius: 16px;
     overflow: hidden;
 }
 
-div[data-testid="stMetric"] {
+.top-user-box {
     background: white;
     border: 1px solid var(--border);
-    padding: 12px;
-    border-radius: 18px;
-    box-shadow: var(--shadow);
+    border-radius: 14px;
+    padding: 10px 14px;
+    text-align: right;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+    margin-bottom: 10px;
 }
 
-.stSelectbox > div > div,
-.stTextInput > div > div,
-.stTextArea textarea,
-.stMultiSelect > div > div {
-    border-radius: 12px !important;
+.top-user-name {
+    font-weight: 700;
+    color: var(--text);
 }
 
-hr {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 10px 0 18px 0;
+.top-user-mail {
+    color: var(--muted);
+    font-size: 0.9rem;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -292,19 +285,25 @@ hr {
 user_name = user_info.get("name", "Utilisateur")
 user_email = user_info.get("email", "Non disponible")
 
-st.markdown(f"""
-<div class="hero">
-    <div style="font-size:2rem;font-weight:800;">🚀 TaskFlow AI</div>
-    <div class="hero-sub">
-        Analyse intelligente des emails et transcriptions, suivi des tâches dans Notion et création de réunions Google Calendar.
-    </div>
-</div>
-""", unsafe_allow_html=True)
+top_left, top_right = st.columns([3.5, 1.5])
 
-with st.sidebar:
-    st.markdown("## Compte connecté")
-    st.write(f"**Nom :** {user_name}")
-    st.write(f"**Email :** {user_email}")
+with top_left:
+    st.markdown("""
+    <div class="hero">
+        <div class="hero-title">🚀 TaskFlow AI</div>
+        <div class="hero-sub">
+            Analyse intelligente des emails et transcriptions, suivi des tâches dans Notion et création de réunions Google Calendar.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with top_right:
+    st.markdown(f"""
+    <div class="top-user-box">
+        <div class="top-user-name">{user_name}</div>
+        <div class="top-user-mail">{user_email}</div>
+    </div>
+    """, unsafe_allow_html=True)
     st.button("Se déconnecter", on_click=st.logout, use_container_width=True)
 
 # -----------------------------
