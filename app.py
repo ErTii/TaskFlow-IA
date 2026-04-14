@@ -91,7 +91,7 @@ html, body, [data-testid="stAppViewContainer"] {
 }
 
 .block-container {
-    padding-top: 1.2rem;
+    padding-top: 3.2rem;
     padding-bottom: 2rem;
 }
 
