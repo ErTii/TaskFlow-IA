@@ -127,12 +127,12 @@ button[data-baseweb="tab"][aria-selected="true"] {
 }
 
 .card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 18px 20px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
-    margin-bottom: 14px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 8px 0 10px 0;
+    box-shadow: none;
+    margin-bottom: 6px;
 }
 
 .hero {
@@ -369,10 +369,12 @@ def afficher_bloc_taches(taches, prefixe):
             st.session_state[key] = True
 
         st.markdown('<div class="card">', unsafe_allow_html=True)
+
         st.checkbox(
-            f"{t.get('task', 'Tâche')} | {t.get('priority', 'Moyenne')} | {t.get('assignee', 'Non assigné')}",
+            f"{t.get('task', 'Tâche')}",
             key=key
         )
+
         st.markdown(
             f"""
             <div class="muted">
@@ -382,6 +384,7 @@ def afficher_bloc_taches(taches, prefixe):
             """,
             unsafe_allow_html=True
         )
+
         st.markdown("</div>", unsafe_allow_html=True)
 
 
