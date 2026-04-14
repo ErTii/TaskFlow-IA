@@ -219,7 +219,8 @@ with tab1:
                         t.get("priority"),
                         t.get("assignee"),
                         None,
-                        statut_manual
+                        statut_manual,
+                        user_email
                     )
                     if succes:
                         nb_envoyees += 1
@@ -316,7 +317,8 @@ with tab2:
                                 t.get("priority"),
                                 t.get("assignee"),
                                 None,
-                                statut_mail
+                                statut_mail,
+                                user_email
                             )
                             if succes:
                                 nb_envoyees_mail += 1
@@ -388,7 +390,7 @@ with tab3:
 
         st.markdown("### Filtres")
 
-        colf1, colf2, colf3 = st.columns(3)
+        colf1, colf2, colf3, colf4 = st.columns(4)
 
         with colf1:
             statuts_disponibles = sorted(df["Statut"].dropna().unique().tolist())
@@ -414,15 +416,26 @@ with tab3:
                 default=assignes_disponibles
             )
 
+        with colf4:
+            createurs_disponibles = sorted([x for x in df["Créé par"].dropna().unique().tolist() if x])
+            filtre_createur = st.multiselect(
+                "Filtrer par créateur",
+                createurs_disponibles,
+                default=createurs_disponibles if createurs_disponibles else []
+            )
+
         df_filtre = df[
             df["Statut"].isin(filtre_statut)
             & df["Priorité"].isin(filtre_priorite)
             & df["Assigné"].isin(filtre_assigne)
         ]
 
+        if createurs_disponibles:
+            df_filtre = df_filtre[df_filtre["Créé par"].isin(filtre_createur)]
+
         st.markdown("### Tableau des tâches")
         st.dataframe(
-            df_filtre[["Tâche", "Priorité", "Assigné", "Statut"]],
+            df_filtre[["Tâche", "Priorité", "Assigné", "Statut", "Créé par"]],
             use_container_width=True,
             hide_index=True
         )
@@ -440,7 +453,7 @@ with tab4:
     else:
         df = pd.DataFrame(taches_notion)
 
-        colm1, colm2, colm3 = st.columns(3)
+        colm1, colm2, colm3, colm4 = st.columns(4)
 
         with colm1:
             statuts_disponibles = sorted(df["Statut"].dropna().unique().tolist())
@@ -469,39 +482,53 @@ with tab4:
                 key="filtre_assigne_modif"
             )
 
+        with colm4:
+            createurs_disponibles = sorted([x for x in df["Créé par"].dropna().unique().tolist() if x])
+            filtre_createur_modif = st.multiselect(
+                "Filtrer par créateur",
+                createurs_disponibles,
+                default=createurs_disponibles if createurs_disponibles else [],
+                key="filtre_createur_modif"
+            )
+
         df_modif = df[
             df["Statut"].isin(filtre_statut_modif)
             & df["Priorité"].isin(filtre_priorite_modif)
             & df["Assigné"].isin(filtre_assigne_modif)
         ].copy()
 
+        if createurs_disponibles:
+            df_modif = df_modif[df_modif["Créé par"].isin(filtre_createur_modif)]
+
         if df_modif.empty:
             st.info("Aucune tâche ne correspond aux filtres.")
         else:
             st.markdown("### Modifier les statuts")
 
-            header = st.columns([5, 1.5, 1.8, 1.5, 2, 1.5])
+            header = st.columns([4.5, 1.5, 1.8, 1.5, 2.2, 2, 1.5])
             header[0].markdown("**Tâche**")
             header[1].markdown("**Priorité**")
             header[2].markdown("**Assigné**")
             header[3].markdown("**Statut actuel**")
-            header[4].markdown("**Nouveau statut**")
-            header[5].markdown("**Action**")
+            header[4].markdown("**Créé par**")
+            header[5].markdown("**Nouveau statut**")
+            header[6].markdown("**Action**")
 
             st.markdown("---")
 
             for _, row in df_modif.iterrows():
-                cols = st.columns([5, 1.5, 1.8, 1.5, 2, 1.5])
+                cols = st.columns([4.5, 1.5, 1.8, 1.5, 2.2, 2, 1.5])
 
                 cols[0].write(row["Tâche"])
                 cols[1].write(row["Priorité"])
                 cols[2].write(row["Assigné"])
                 cols[3].write(row["Statut"])
+                cols[4].write(row["Créé par"])
 
                 options_statut = ["À faire", "En cours", "Fait"]
                 index_statut = options_statut.index(row["Statut"]) if row["Statut"] in options_statut else 0
 
-                nouveau_statut = cols[4].selectbox(
+                nouveau_statut = cols[5].selectbox(
                     "Nouveau statut",
                     options_statut,
                     index=index_statut,
@@ -509,7 +536,7 @@ with tab4:
                     label_visibility="collapsed"
                 )
 
-                if cols[5].button("Mettre à jour", key=f"update_status_{row['id']}"):
+                if cols[6].button("Mettre à jour", key=f"update_status_{row['id']}"):
                     succes_update, message_update = mettre_a_jour_statut_tache(row["id"], nouveau_statut)
                     if succes_update:
                         st.session_state.notification_message = "Statut mis à jour avec succès."

@@ -23,7 +23,7 @@ def _envoyer_vers_notion(properties):
     return requests.post(url, headers=headers, json=data, timeout=15)
 
 
-def creer_tache_notion(nom_tache, priorite, assigne, date_str=None, statut="À faire"):
+def creer_tache_notion(nom_tache, priorite, assigne, date_str=None, statut="À faire", createur_email=""):
     if not nom_tache or not str(nom_tache).strip():
         return False, "Nom de tâche vide."
 
@@ -42,6 +42,11 @@ def creer_tache_notion(nom_tache, priorite, assigne, date_str=None, statut="À f
         }
     }
 
+    if createur_email:
+        properties["Créé par"] = {
+            "rich_text": [{"text": {"content": str(createur_email).strip()}}]
+        }
+
     try:
         response = _envoyer_vers_notion(properties)
 
@@ -49,15 +54,19 @@ def creer_tache_notion(nom_tache, priorite, assigne, date_str=None, statut="À f
             return True, "Tâche créée avec succès dans Notion."
 
         if response.status_code == 400:
-            properties_sans_statut = {
+            properties_fallback = {
                 "Name": properties["Name"],
                 "Priorité": properties["Priorité"],
                 "Assigné": properties["Assigné"],
             }
-            response_retry = _envoyer_vers_notion(properties_sans_statut)
+
+            if "Statut" in properties:
+                properties_fallback["Statut"] = properties["Statut"]
+
+            response_retry = _envoyer_vers_notion(properties_fallback)
 
             if response_retry.status_code in (200, 201):
-                return True, "Tâche créée dans Notion (sans colonne Statut)."
+                return True, "Tâche créée dans Notion (sans certaines colonnes optionnelles)."
 
             try:
                 erreur = response_retry.json()
@@ -125,6 +134,7 @@ def recuperer_taches_notion():
                 priorite = _extraire_rich_text(properties.get("Priorité", {}))
                 assigne = _extraire_rich_text(properties.get("Assigné", {}))
                 statut = _extraire_rich_text(properties.get("Statut", {}))
+                cree_par = _extraire_rich_text(properties.get("Créé par", {}))
 
                 if not statut:
                     statut = "Sans statut"
@@ -132,6 +142,8 @@ def recuperer_taches_notion():
                     priorite = "Non définie"
                 if not assigne:
                     assigne = "Non assigné"
+                if not cree_par:
+                    cree_par = ""
 
                 toutes_les_taches.append({
                     "id": page.get("id"),
@@ -139,6 +151,7 @@ def recuperer_taches_notion():
                     "Priorité": priorite,
                     "Assigné": assigne,
                     "Statut": statut,
+                    "Créé par": cree_par,
                     "Créé le": page.get("created_time", "")
                 })
 
