@@ -23,7 +23,10 @@ def afficher_notification_fixe(message, type_notif="success"):
 # -----------------------------
 # AUTH GOOGLE
 # -----------------------------
-if not st.user.is_logged_in:
+user_info = st.user.to_dict() if hasattr(st.user, "to_dict") else {}
+is_logged_in = user_info.get("is_logged_in", False)
+
+if not is_logged_in:
     st.markdown("""
         <style>
         .login-box {
@@ -53,7 +56,6 @@ if not st.user.is_logged_in:
     st.button("Se connecter avec Google", on_click=st.login, use_container_width=True)
     st.stop()
 
-
 # -----------------------------
 # STYLE
 # -----------------------------
@@ -79,10 +81,13 @@ st.markdown("""
 st.title("🚀 TaskFlow AI")
 st.subheader("L'IA qui transforme vos flux en actions Notion")
 
+user_name = user_info.get("name", "Utilisateur")
+user_email = user_info.get("email", "Non disponible")
+
 with st.sidebar:
     st.markdown("## Compte connecté")
-    st.write(f"**Nom :** {getattr(st.user, 'name', 'Utilisateur')}")
-    st.write(f"**Email :** {getattr(st.user, 'email', 'Non disponible')}")
+    st.write(f"**Nom :** {user_name}")
+    st.write(f"**Email :** {user_email}")
     st.button("Se déconnecter", on_click=st.logout, use_container_width=True)
 
 # -----------------------------
@@ -108,6 +113,13 @@ tab1, tab2, tab3, tab4 = st.tabs([
 ])
 
 
+def _recuperer_access_token():
+    tokens = user_info.get("tokens", {})
+    if isinstance(tokens, dict):
+        return tokens.get("access")
+    return None
+
+
 def afficher_bloc_taches(taches, prefixe):
     if not taches:
         st.info("Aucune tâche détectée.")
@@ -130,6 +142,8 @@ def afficher_bloc_reunions(reunions, prefixe):
 
     st.markdown("### Réunions détectées")
 
+    access_token = _recuperer_access_token()
+
     for i, reunion in enumerate(reunions):
         st.markdown(f"**Réunion {i + 1}**")
         st.write(f"**Titre :** {reunion.get('title', '')}")
@@ -145,7 +159,9 @@ def afficher_bloc_reunions(reunions, prefixe):
 
         if st.button("Créer dans Google Calendar", key=f"{prefixe}_create_meeting_{i}"):
             emails = [email.strip() for email in participants.split(",") if email.strip()]
+
             succes, message = creer_evenement_calendar(
+                access_token=access_token,
                 titre=reunion.get("title", "Réunion"),
                 date_str=reunion.get("date", ""),
                 heure_str=reunion.get("time", ""),
@@ -153,6 +169,7 @@ def afficher_bloc_reunions(reunions, prefixe):
                 duree_minutes=reunion.get("duration_minutes", 60),
                 description="Événement proposé par TaskFlow AI"
             )
+
             if succes:
                 st.session_state.notification_message = "Réunion créée avec succès dans Google Calendar."
                 st.session_state.notification_type = "success"
@@ -225,13 +242,12 @@ with tab2:
 
     if st.button("🔍 Lancer le scan automatique", key="scan_outlook"):
         with st.spinner("Connexion à Gmail..."):
-            access_token = None
-
-            if hasattr(st.user, "tokens"):
-                access_token = st.user.tokens.get("access")
+            access_token = _recuperer_access_token()
 
             if not access_token:
-                st.session_state.notification_message = "Aucun token Gmail disponible. Déconnecte-toi puis reconnecte-toi pour autoriser Gmail."
+                st.session_state.notification_message = (
+                    "Aucun token Gmail disponible. Déconnecte-toi puis reconnecte-toi pour autoriser Gmail."
+                )
                 st.session_state.notification_type = "error"
                 st.session_state.scan_analysis = None
                 st.rerun()
