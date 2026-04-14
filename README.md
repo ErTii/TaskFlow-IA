@@ -31,3 +31,6 @@ Envoyer dans Notion avec :
 # V0.0.04 : 
 - modification du statut des tâches directement depuis l’application
 
+# V0.0.05 : 
+- possibilité de se connecter avec un compte google (seulement les users acceptés en testeur)
+
