@@ -12,6 +12,51 @@ from google_calendar_api import creer_evenement_calendar
 
 st.set_page_config(page_title="TaskFlow AI", page_icon="🚀", layout="wide")
 
+
+def afficher_notification_fixe(message, type_notif="success"):
+    if type_notif == "success":
+        st.toast(message, icon="✅")
+    else:
+        st.toast(message, icon="❌")
+
+
+# -----------------------------
+# AUTH GOOGLE
+# -----------------------------
+if not st.user.is_logged_in:
+    st.markdown("""
+        <style>
+        .login-box {
+            max-width: 700px;
+            margin: 60px auto;
+            padding: 32px;
+            border-radius: 18px;
+            background: #f8f9fa;
+            border: 1px solid #e5e7eb;
+            text-align: center;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+        <div class="login-box">
+            <h1>🚀 TaskFlow AI</h1>
+            <p style="font-size:18px;">
+                Connectez-vous avec Google pour accéder à l'application.
+            </p>
+            <p style="color:#6b7280;">
+                Seuls les comptes ajoutés comme testeurs Google peuvent se connecter.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.button("Se connecter avec Google", on_click=st.login, use_container_width=True)
+    st.stop()
+
+
+# -----------------------------
+# STYLE
+# -----------------------------
 st.markdown("""
     <style>
     .stButton>button {
@@ -28,9 +73,21 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# -----------------------------
+# HEADER + USER INFO
+# -----------------------------
 st.title("🚀 TaskFlow AI")
 st.subheader("L'IA qui transforme vos flux en actions Notion")
 
+with st.sidebar:
+    st.markdown("## Compte connecté")
+    st.write(f"**Nom :** {getattr(st.user, 'name', 'Utilisateur')}")
+    st.write(f"**Email :** {getattr(st.user, 'email', 'Non disponible')}")
+    st.button("Se déconnecter", on_click=st.logout, use_container_width=True)
+
+# -----------------------------
+# SESSION STATE
+# -----------------------------
 if "manual_analysis" not in st.session_state:
     st.session_state.manual_analysis = None
 
@@ -45,17 +102,10 @@ if "notification_type" not in st.session_state:
 
 tab1, tab2, tab3, tab4 = st.tabs([
     "📝 Saisie Manuelle",
-    "📥 Scan Mail",
+    "📥 Scan Outlook",
     "📊 Dashboard",
     "✏️ Modifier"
 ])
-
-
-def afficher_notification_fixe(message, type_notif="success"):
-    if type_notif == "success":
-        st.toast(message, icon="✅")
-    else:
-        st.toast(message, icon="❌")
 
 
 def afficher_bloc_taches(taches, prefixe):
